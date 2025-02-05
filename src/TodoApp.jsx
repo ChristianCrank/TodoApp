@@ -1,18 +1,25 @@
 // TodoApp.js
+import { useAuth } from "react-oidc-context";
 import React, { useState, useEffect } from 'react';
-import './TodoApp.css';
-//import { Auth, API } from 'aws-amplify';
+import Login from './login';
 
 const TodoApp = () => {
   const [todos, setTodos] = useState([]);
-  const [newTodo, setNewTodo] = useState('');
+  const [newTodo, setNewTodo] = useState(''); 
+  const auth = useAuth();
 
-  // Fetch todos from API
+  // Cognito Function
+  const signOutRedirect = () => {
+    const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
+    const logoutUri = import.meta.env.VITE_LOGOUT_URI; 
+    const cognitoDomain = import.meta.env.VITE_COGNITO_DOMAIN; 
+    window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
+  };
+
+  // TODO functions
   const fetchTodos = async () => {
     try {
-      //const user = await Auth.currentAuthenticatedUser();
-      //const data = await API.get('todoAPI', `/todos/${user.username}`);
-      //setTodos(data.items);
+      //code
     } catch (err) {
       console.error('Error fetching todos:', err);
     }
@@ -23,12 +30,6 @@ const TodoApp = () => {
     if (!newTodo.trim()) return;
     console.log('Adding todo:', newTodo);
     try {
-      //const user = await Auth.currentAuthenticatedUser();
-      //await API.post('todoAPI', '/todos', {
-        //body: { id: Date.now().toString(), text: newTodo, completed: false, userId: user.username }
-      //});
-      //setNewTodo('');
-      //fetchTodos();
       const newTodoItem = { id: Date.now().toString(), text: newTodo, completed: false };
       setTodos([...todos, newTodoItem]);
       setNewTodo('');
@@ -40,8 +41,7 @@ const TodoApp = () => {
   // Toggle completion
   const toggleTodo = async (id) => {
     try {
-      //await API.put('todoAPI', `/todos/${id}`, { body: { completed: !todos.find(t => t.id === id).completed } });
-      //fetchTodos();
+      setTodos(todos.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo));
     } catch (err) {
       console.error('Error toggling todo:', err);
     }
@@ -50,8 +50,9 @@ const TodoApp = () => {
   // Delete todo
   const deleteTodo = async (id) => {
     try {
-      await API.del('todoAPI', `/todos/${id}`);
-      fetchTodos();
+      //code
+      setTodos(todos.filter(todo => todo.id !== id));
+      //fetchTodos();
     } catch (err) {
       console.error('Error deleting todo:', err);
     }
@@ -61,8 +62,29 @@ const TodoApp = () => {
     fetchTodos();
   }, []);
 
+  if (auth.isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (auth.error) {
+    return <div>Encountering error... {auth.error.message}</div>;
+  }
+
+  if (!auth.isAuthenticated) {
+    return <Login />;
+  }
+
   return (
     <div className="container">
+      {auth.user?.profile && (
+        <header>
+          <div className="user-info">
+            <span>Welcome, {auth.user.profile.email}</span>
+            <button onClick={signOutRedirect}>Sign Out</button>
+          </div>
+        </header>
+      )}
+      
       <h1>Todo App</h1>
       <div className="input-section">
         <input
@@ -72,16 +94,17 @@ const TodoApp = () => {
         />
         <button onClick={addTodo}>Add</button>
       </div>
+      
       <div className="todo-list">
         {todos.map(todo => (
-          <div key={todo.id}>
+          <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
             <input
               type="checkbox"
               checked={todo.completed}
               onChange={() => toggleTodo(todo.id)}
             />
             <span>{todo.text}</span>
-            <button onClick={() => deleteTodo(todo.id)}>Delete</button>
+            <button onClick={() => deleteTodo(todo.id)}>🗑️</button>
           </div>
         ))}
       </div>

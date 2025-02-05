@@ -1,19 +1,39 @@
 // vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
+import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
 
 export default defineConfig({
-  plugins: [
-    react({
-      jsxRuntime: 'automatic', // Enables the new JSX transform (React 17+)
-    }),
-  ],
-  esbuild: {
-    loader: 'jsx', // Treat .js files as JSX
-    include: /src\/.*\.jsx?$/, // Apply to .js and .jsx files in src/
-  },
+  plugins: [react()],
   server: {
-    port: 3000,
-    open: true, //Automatically open in browser
+    port: 3000, // Specify the port here
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      // Node.js global to browser globalThis
+      define: {
+        global: 'globalThis'
+      },
+      // Enable esbuild polyfill plugins
+      plugins: [
+        NodeGlobalsPolyfillPlugin({
+          buffer: true
+        }),
+        NodeModulesPolyfillPlugin()
+      ]
+    }
+  },
+  build: {
+    rollupOptions: {
+      plugins: [
+        // Enable rollup polyfills plugin
+        // used during production bundling
+        NodeGlobalsPolyfillPlugin({
+          buffer: true
+        }),
+        NodeModulesPolyfillPlugin()
+      ]
+    }
+  }
 });
